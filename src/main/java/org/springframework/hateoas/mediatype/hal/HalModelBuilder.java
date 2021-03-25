@@ -42,13 +42,14 @@ import com.fasterxml.jackson.annotation.JsonUnwrapped;
  *
  * @author Greg Turnquist
  * @author Oliver Drotbohm
+ * @author Mark Pruden
  * @since 1.1
  */
-public class HalModelBuilder {
+public class HalModelBuilder<T> {
 
 	private final EmbeddedWrappers wrappers;
 
-	private Object model;
+	private T model;
 	private Links links = Links.NONE;
 	private final List<Object> embeddeds = new ArrayList<>();
 
@@ -61,8 +62,8 @@ public class HalModelBuilder {
 	 *
 	 * @return will never be {@literal null}.
 	 */
-	public static HalModelBuilder halModel() {
-		return new HalModelBuilder(new EmbeddedWrappers(false));
+	public static HalModelBuilder<?> halModel() {
+		return new HalModelBuilder<>(new EmbeddedWrappers(false));
 	}
 
 	/**
@@ -71,11 +72,11 @@ public class HalModelBuilder {
 	 * @param wrappers must not be {@literal null}.
 	 * @return will never be {@literal null}.
 	 */
-	public static HalModelBuilder halModel(EmbeddedWrappers wrappers) {
+	public static HalModelBuilder<?> halModel(EmbeddedWrappers wrappers) {
 
 		Assert.notNull(wrappers, "EmbeddedWrappers must not be null!");
 
-		return new HalModelBuilder(wrappers);
+		return new HalModelBuilder<>(wrappers);
 	}
 
 	/**
@@ -84,7 +85,7 @@ public class HalModelBuilder {
 	 * @param entity must not be {@literal null}.
 	 * @return
 	 */
-	public static HalModelBuilder halModelOf(Object entity) {
+	public static <S> HalModelBuilder<S> halModelOf(S entity) {
 		return halModel().entity(entity);
 	}
 
@@ -93,17 +94,19 @@ public class HalModelBuilder {
 	 *
 	 * @return
 	 */
-	public static HalModelBuilder emptyHalModel() {
+	public static HalModelBuilder<?> emptyHalModel() {
 		return halModel();
 	}
 
 	/**
 	 * Embed the entity, but with no relation.
 	 *
-	 * @param entity
-	 * @return
+	 * @param <U> The type of the entity
+	 * @param entity The primary entity held within the RepresentationModel
+	 * @return this, with generic type of the provided entity
 	 */
-	public HalModelBuilder entity(Object entity) {
+	@SuppressWarnings("unchecked")
+	public <U> HalModelBuilder<U> entity(U entity) {
 
 		Assert.notNull(entity, "Entity must not be null!");
 
@@ -111,9 +114,9 @@ public class HalModelBuilder {
 			throw new IllegalStateException("Model object already set!");
 		}
 
-		this.model = entity;
+		this.model = (T) entity; // cast entity to the old type of this class
 
-		return this;
+		return (HalModelBuilder<U>) this; // returning this object cast to the new Type <U>
 	}
 
 	/**
@@ -123,7 +126,7 @@ public class HalModelBuilder {
 	 * @param linkRelation must not be {@literal null}.
 	 * @return will never be {@literal null}.
 	 */
-	public HalModelBuilder embed(Object entity, LinkRelation linkRelation) {
+	public HalModelBuilder<T> embed(Object entity, LinkRelation linkRelation) {
 
 		Assert.notNull(entity, "Entity must not be null!");
 		Assert.notNull(linkRelation, "Link relation must not be null!");
@@ -139,7 +142,7 @@ public class HalModelBuilder {
 	 * @param entity must not be {@literal null}.
 	 * @return will never be {@literal null}.
 	 */
-	public HalModelBuilder embed(Object entity) {
+	public HalModelBuilder<T> embed(Object entity) {
 
 		Assert.notNull(entity, "Entity must not be null!");
 
@@ -155,7 +158,7 @@ public class HalModelBuilder {
 	 * @param collection must not be {@literal null}.
 	 * @return will never be {@literal null}.
 	 */
-	public HalModelBuilder embed(Collection<?> collection) {
+	public HalModelBuilder<T> embed(Collection<?> collection) {
 		return embed(collection, Void.class);
 	}
 
@@ -169,7 +172,7 @@ public class HalModelBuilder {
 	 * @return will never be {@literal null}.
 	 * @see #embed(Collection, LinkRelation)
 	 */
-	public HalModelBuilder embed(Collection<?> collection, Class<?> type) {
+	public HalModelBuilder<T> embed(Collection<?> collection, Class<?> type) {
 
 		Assert.notNull(collection, "Collection must not be null!");
 		Assert.notNull(type, "Type must not be null!");
@@ -190,7 +193,7 @@ public class HalModelBuilder {
 	 * @param relation must not be {@literal null}.
 	 * @return will never be {@literal null}.
 	 */
-	public HalModelBuilder embed(Collection<?> collection, LinkRelation relation) {
+	public HalModelBuilder<T> embed(Collection<?> collection, LinkRelation relation) {
 
 		Assert.notNull(collection, "Collection must not be null!");
 		Assert.notNull(relation, "Link relation must not be null!");
@@ -207,7 +210,7 @@ public class HalModelBuilder {
 	 * @param stream must not be {@literal null}.
 	 * @return will never be {@literal null}.
 	 */
-	public HalModelBuilder embed(Stream<?> stream) {
+	public HalModelBuilder<T> embed(Stream<?> stream) {
 		return embed(stream, Void.class);
 	}
 
@@ -223,7 +226,7 @@ public class HalModelBuilder {
 	 * @return will never be {@literal null}.
 	 * @see #embed(Collection, LinkRelation)
 	 */
-	public HalModelBuilder embed(Stream<?> stream, Class<?> type) {
+	public HalModelBuilder<T> embed(Stream<?> stream, Class<?> type) {
 
 		Assert.notNull(stream, "Stream must not be null!");
 		Assert.notNull(type, "Type must not be null!");
@@ -241,7 +244,7 @@ public class HalModelBuilder {
 	 * @param relation must not be {@literal null}.
 	 * @return will never be {@literal null}.
 	 */
-	public HalModelBuilder embed(Stream<?> stream, LinkRelation relation) {
+	public HalModelBuilder<T> embed(Stream<?> stream, LinkRelation relation) {
 
 		Assert.notNull(stream, "Stream must not be null!");
 		Assert.notNull(relation, "Link relation must not be null!");
@@ -251,7 +254,7 @@ public class HalModelBuilder {
 
 	/**
 	 * Initiates the setup of a preview given the current payload. Clients have to conclude the setup calling any of the
-	 * {@link EntityPreviewBuilder#forLink(Link)} methods. As an example, the call chain of:
+	 * {@link PreviewBuilder#forLink(Link)} methods. As an example, the call chain of:
 	 *
 	 * <pre>
 	 * ….preview(…).forLink("…", "relation")
@@ -273,7 +276,7 @@ public class HalModelBuilder {
 	 * @param entity
 	 * @return will never be {@literal null}.
 	 */
-	public PreviewBuilder preview(Object entity) {
+	public PreviewBuilder<T> preview(Object entity) {
 
 		Assert.notNull(entity, "Preview entity must not be null!");
 
@@ -287,7 +290,7 @@ public class HalModelBuilder {
 	 * @return will never be {@literal null}.
 	 * @see #preview(Object)
 	 */
-	public PreviewBuilder preview(Collection<?> collection) {
+	public PreviewBuilder<T> preview(Collection<?> collection) {
 
 		Assert.notNull(collection, "Preview collection must not be null!");
 
@@ -303,7 +306,7 @@ public class HalModelBuilder {
 	 * @return will never be {@literal null}.
 	 * @see #preview(Object)
 	 */
-	public PreviewBuilder preview(Collection<?> collection, Class<?> type) {
+	public PreviewBuilder<T> preview(Collection<?> collection, Class<?> type) {
 
 		Assert.notNull(collection, "Preview collection must not be null!");
 		Assert.notNull(type, "Type must not be null!");
@@ -320,7 +323,7 @@ public class HalModelBuilder {
 	 * @param link must not be {@literal null}.
 	 * @return will never be {@literal null}.
 	 */
-	public HalModelBuilder link(Link link) {
+	public HalModelBuilder<T> link(Link link) {
 
 		this.links = links.and(link);
 
@@ -334,7 +337,7 @@ public class HalModelBuilder {
 	 * @param relation must not be {@literal null}.
 	 * @return will never be {@literal null}.
 	 */
-	public HalModelBuilder link(String href, LinkRelation relation) {
+	public HalModelBuilder<T> link(String href, LinkRelation relation) {
 		return link(Link.of(href, relation));
 	}
 
@@ -344,7 +347,7 @@ public class HalModelBuilder {
 	 * @param links must not be {@literal null}.
 	 * @return will never be {@literal null}.
 	 */
-	public HalModelBuilder links(Iterable<Link> links) {
+	public HalModelBuilder<T> links(Iterable<Link> links) {
 
 		this.links = this.links.and(links);
 
@@ -357,9 +360,8 @@ public class HalModelBuilder {
 	 *
 	 * @return will never be {@literal null}.
 	 */
-	@SuppressWarnings("unchecked")
-	public <T extends RepresentationModel<T>> RepresentationModel<T> build() {
-		return (T) new HalRepresentationModel<>(model, CollectionModel.of(embeddeds), links);
+	public RepresentationModel<EntityModel<T>> build() {
+		return new HalRepresentationModel<>(model, CollectionModel.of(embeddeds), links);
 	}
 
 	/**
@@ -370,7 +372,7 @@ public class HalModelBuilder {
 	 * @param link
 	 * @return
 	 */
-	private HalModelBuilder previewFor(Object entity, Link link) {
+	private HalModelBuilder<T> previewFor(Object entity, Link link) {
 
 		link(link);
 		embed(entity, link.getRel());
@@ -383,7 +385,7 @@ public class HalModelBuilder {
 		private final @Nullable T entity;
 		private final CollectionModel<?> embeddeds;
 
-		public HalRepresentationModel(@Nullable T entity, CollectionModel<T> embeddeds, Links links) {
+		public HalRepresentationModel(@Nullable T entity, CollectionModel<?> embeddeds, Links links) {
 
 			this(entity, embeddeds);
 
@@ -414,7 +416,7 @@ public class HalModelBuilder {
 		}
 	}
 
-	public interface PreviewBuilder {
+	public interface PreviewBuilder<T> {
 
 		/**
 		 * Concludes the set up of a preview for the given {@link Link}.
@@ -423,7 +425,7 @@ public class HalModelBuilder {
 		 * @return will never be {@literal null}.
 		 * @see HalModelBuilder#preview(Object)
 		 */
-		HalModelBuilder forLink(Link link);
+		HalModelBuilder<T> forLink(Link link);
 
 		/**
 		 * Concludes the set up of a preview for the {@link Link} consisting ot the given href and {@link LinkRelation}.
@@ -433,7 +435,7 @@ public class HalModelBuilder {
 		 * @return will never be {@literal null}.
 		 * @see HalModelBuilder#preview(Object)
 		 */
-		default HalModelBuilder forLink(String href, LinkRelation relation) {
+		default HalModelBuilder<T> forLink(String href, LinkRelation relation) {
 			return forLink(Link.of(href, relation));
 		}
 	}

@@ -125,7 +125,7 @@ public class HalModelBuilderUnitTest {
 	@Test // #864
 	void renderSingleItemUsingHalModelBuilder() throws Exception {
 
-		RepresentationModel<?> model = halModel() //
+		RepresentationModel<EntityModel<Author>> model = halModel() //
 				.entity(new Author("Alan Watts", "January 6, 1915", "November 16, 1973")) //
 				.link(ALAN_WATTS_SELF) //
 				.build();
@@ -136,7 +136,7 @@ public class HalModelBuilderUnitTest {
 	@Test // #864
 	void renderSingleItemUsingDefaultModelBuilder() throws Exception {
 
-		RepresentationModel<?> model = halModel()//
+		RepresentationModel<EntityModel<Author>> model = halModel()//
 				.entity(new Author("Alan Watts", "January 6, 1915", "November 16, 1973")) //
 				.link(ALAN_WATTS_SELF) //
 				.build();
@@ -205,7 +205,7 @@ public class HalModelBuilderUnitTest {
 	@Test
 	void progressivelyAddingContentUsingHalModelBuilder() throws JsonProcessingException {
 
-		HalModelBuilder halModelBuilder = halModel();
+		HalModelBuilder<?> halModelBuilder = halModel();
 
 		assertThat(this.mapper.writeValueAsString(halModelBuilder.build()))
 				.isEqualTo(contextualMapper.readFileContent("hal-empty.json"));
@@ -284,7 +284,7 @@ public class HalModelBuilderUnitTest {
 		LinkRelation favoriteProducts = LinkRelation.of("favorite products");
 		LinkRelation purchasedProducts = LinkRelation.of("purchased products");
 
-		HalModelBuilder builder = halModel();
+		HalModelBuilder<?> builder = halModel();
 
 		builder.link(Link.of("/products").withSelfRel());
 
